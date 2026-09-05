@@ -1,0 +1,5 @@
+node_modules/
+.next/
+storage/tickets/*.pdf
+.env
+*.log

@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================================
+// ENUMS
+// ==========================================================
+
+enum UserRole {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAYMENT_VERIFICATION
+  PAID
+  PAYMENT_REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_ADMIN_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  REFUNDED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CLIQ
+}
+
+// ==========================================================
+// CORE MODELS
+// ==========================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         UserRole @default(CUSTOMER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders       Order[]
+  checkIns     CheckIn[]      @relation("StaffCheckIns")
+  auditLogs    AuditLog[]     @relation("AdminAuditLogs")
+  verifiedPays Payment[]      @relation("VerifiedByAdmin")
+  passwordResets PasswordResetToken[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  events Event[]
+
+  @@map("categories")
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  createdAt DateTime @default(now())
+
+  events Event[]
+
+  @@map("venues")
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String
+  rules          String?
+  ageRestriction String?
+  dressCode      String?
+  coverImageUrl  String?
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  venueId        String
+  venue          Venue    @relation(fields: [venueId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  isPublished    Boolean  @default(false)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ticketTypes TicketType[]
+  orders      Order[]
+  tickets     Ticket[]
+
+  @@index([isPublished, startDate])
+  @@map("events")
+}
+
+model TicketType {
+  id               String   @id @default(cuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name             String // Early Bird, Regular, VIP, VVIP
+  description      String?
+  price            Decimal  @db.Decimal(10, 2)
+  currency         String   @default("JOD")
+  totalInventory   Int
+  reservedCount    Int      @default(0) // tickets currently held by active reservations
+  soldCount        Int      @default(0) // tickets belonging to PAID orders
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  orderItems OrderItem[]
+  tickets    Ticket[]
+
+  @@index([eventId])
+  @@map("ticket_types")
+}
+
+// Sequence table used to atomically generate gapless-ish, always-increasing
+// ticket numbers server-side, independent of ticket cancellations.
+model TicketNumberSequence {
+  id          Int      @id @default(1)
+  lastNumber  Int      @default(0)
+
+  @@map("ticket_number_sequence")
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderNumber       String        @unique
+  customerId        String?
+  customer          User?         @relation(fields: [customerId], references: [id])
+  customerFullName  String // mandatory three-part name
+  email             String
+  phone             String
+  eventId           String
+  event             Event         @relation(fields: [eventId], references: [id])
+  totalAmount       Decimal       @db.Decimal(10, 2)
+  currency          String        @default("JOD")
+  status            OrderStatus   @default(AWAITING_PAYMENT)
+  reservationExpiresAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+  tickets  Ticket[]
+  auditLogs AuditLog[]
+
+  @@index([status])
+  @@index([email])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String     @id @default(cuid())
+  orderId      String
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketTypeId String
+  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  subtotal     Decimal    @db.Decimal(10, 2)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  orderId          String
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method           PaymentMethod @default(CLIQ)
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("JOD")
+  status           PaymentStatus @default(PENDING)
+  submittedAt      DateTime?
+  verifiedAt       DateTime?
+  verifiedById     String?
+  verifiedBy       User?         @relation("VerifiedByAdmin", fields: [verifiedById], references: [id])
+  rejectionReason  String?
+  adminNote        String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status])
+  @@map("payments")
+}
+
+model Ticket {
+  id           String       @id @default(cuid())
+  ticketNumber String       @unique // TKT-000001
+  qrToken      String       @unique // cryptographically secure random token
+  orderId      String
+  order        Order        @relation(fields: [orderId], references: [id])
+  customerName String
+  eventId      String
+  event        Event        @relation(fields: [eventId], references: [id])
+  ticketTypeId String
+  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id])
+  status       TicketStatus @default(VALID)
+  pdfPath      String?
+  createdAt    DateTime     @default(now())
+  usedAt       DateTime?
+  checkedInById String?
+
+  checkIns CheckIn[]
+
+  @@index([qrToken])
+  @@index([ticketNumber])
+  @@map("tickets")
+}
+
+model CheckIn {
+  id            String   @id @default(cuid())
+  ticketId      String
+  ticket        Ticket   @relation(fields: [ticketId], references: [id])
+  staffId       String?
+  staff         User?    @relation("StaffCheckIns", fields: [staffId], references: [id])
+  result        String // VALID_CHECKED_IN | ALREADY_USED | INVALID
+  location      String?
+  createdAt     DateTime @default(now())
+
+  @@map("check_ins")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  adminId        String?
+  admin          User?    @relation("AdminAuditLogs", fields: [adminId], references: [id])
+  orderId        String?
+  order          Order?   @relation(fields: [orderId], references: [id])
+  action         String
+  previousStatus String?
+  newStatus      String?
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([orderId])
+  @@map("audit_logs")
+}
+
+model SiteSettings {
+  id                   Int      @id @default(1)
+  businessName         String   @default("Nightlist")
+  cliqAlias            String   @default("SET_ME_IN_ADMIN")
+  paymentInstructions  String   @default("Transfer the exact amount via CliQ to the alias above, then confirm below.")
+  supportPhone         String   @default("+962 7 0000 0000")
+  supportEmail         String   @default("support@example.com")
+  reservationMinutes   Int      @default(15)
+  updatedAt            DateTime @updatedAt
+
+  @@map("site_settings")
+}

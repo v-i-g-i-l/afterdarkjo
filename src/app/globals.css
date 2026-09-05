@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #08080c;
+  --ink-raised: #111116;
+  --ink-card: #15151b;
+  --hairline: #26262f;
+  --bone: #f3f1ea;
+  --gold: #c9a227;
+  --gold-soft: #e4c65f;
+  --ember: #c1443d;
+  --emerald: #2f8f5b;
+  --slate: #8d8d9c;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-raised: var(--ink-raised);
+  --color-ink-card: var(--ink-card);
+  --color-hairline: var(--hairline);
+  --color-bone: var(--bone);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-ember: var(--ember);
+  --color-emerald: var(--emerald);
+  --color-slate: var(--slate);
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Georgia", serif;
+  --font-body: -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
