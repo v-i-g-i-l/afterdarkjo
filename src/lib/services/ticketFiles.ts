@@ -10,7 +10,7 @@ import { renderTicketPdf } from "@/lib/services/ticketPdf";
 const STORAGE_DIR = path.join(process.cwd(), "storage", "tickets");
 
 async function ensureDir() {
-  await fs.mkdir(STORAGE_DIR, { recursive: true });
+  await fs.mkdir(/tmp/tickets, { recursive: true });
 }
 
 function pdfPathFor(ticketNumber: string) {
