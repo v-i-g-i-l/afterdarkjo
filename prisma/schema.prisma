@@ -115,9 +115,9 @@ model Event {
   dressCode      String?
   coverImageUrl  String?
   categoryId     String
-  category       Category @relation(fields: [categoryId], references: [id])
+  category       String
   venueId        String
-  venue          Venue    @relation(fields: [venueId], references: [id])
+  venue          String
   startDate      DateTime
   endDate        DateTime
   isPublished    Boolean  @default(false)
