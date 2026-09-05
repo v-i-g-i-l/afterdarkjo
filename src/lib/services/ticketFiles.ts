@@ -14,7 +14,7 @@ async function ensureDir() {
 }
 
 function pdfPathFor(ticketNumber: string) {
-  return path.join(STORAGE_DIR, `${ticketNumber}.pdf`);
+  return path.join(/tmp/tickets, `${ticketNumber}.pdf`);
 }
 
 interface TicketRow {
