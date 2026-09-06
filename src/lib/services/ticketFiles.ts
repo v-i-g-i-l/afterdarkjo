@@ -1,21 +1,7 @@
-import fs from "fs/promises";
-import path from "path";
 import { ZipArchive } from "archiver";
 import { PassThrough } from "stream";
 import { queryOne, query } from "@/lib/db";
 import { renderTicketPdf } from "@/lib/services/ticketPdf";
-
-// Ticket PDFs are private application storage (not under /public), served
-// only through an authenticated route handler that checks ownership.
-const STORAGE_DIR = path.join(process.cwd(), "storage", "tickets");
-
-async function ensureDir() {
-  await fs.mkdir('/tmp/tickets', { recursive: true });
-}
-
-function pdfPathFor(ticketNumber: string) {
-  return path.join(/tmp/tickets, `${ticketNumber}.pdf`);
-}
 
 interface TicketRow {
   id: string;
@@ -47,20 +33,14 @@ async function fetchTicketRow(ticketId: string): Promise<TicketRow | null> {
   );
 }
 
-/** Generates (or returns cached) PDF bytes for one ticket. */
+/** Generates PDF bytes for one ticket directly in memory (Serverless friendly) */
 export async function getOrCreateTicketPdf(ticketId: string): Promise<Buffer> {
   const row = await fetchTicketRow(ticketId);
   if (!row) throw new Error("Ticket not found");
 
-  await ensureDir();
-  const filePath = pdfPathFor(row.ticket_number);
-  try {
-    return await fs.readFile(filePath);
-  } catch {
-    // not cached yet, generate below
-  }
-
   const appUrl = process.env.APP_URL || "http://localhost:3000";
+  
+  // توليد الـ PDF في الذاكرة بدون محاولة حفظه في مجلدات السيرفر
   const pdf = await renderTicketPdf({
     eventName: row.event_name,
     eventDate: new Date(row.start_date),
@@ -75,11 +55,6 @@ export async function getOrCreateTicketPdf(ticketId: string): Promise<Buffer> {
     status: row.status,
   });
 
-  await fs.writeFile(filePath, pdf);
-  await query(`UPDATE tickets SET pdf_path = $1 WHERE id = $2`, [
-    filePath,
-    ticketId,
-  ]);
   return pdf;
 }
 
