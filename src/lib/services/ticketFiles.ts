@@ -10,11 +10,11 @@ import { renderTicketPdf } from "@/lib/services/ticketPdf";
 const STORAGE_DIR = path.join(process.cwd(), "storage", "tickets");
 
 async function ensureDir() {
-  await fs.mkdir('/tmp/tickets', { recursive: true });
+  await fs.mkdir('/tmp/', { recursive: true });
 }
 
 function pdfPathFor(ticketNumber: string) {
-  return path.join('tmp/tickets', `${ticketNumber}.pdf`);
+  return path.join(tmp/tickets, `${ticketNumber}.pdf`);
 }
 
 interface TicketRow {
