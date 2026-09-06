@@ -217,7 +217,7 @@ export function TicketSelector({
                 <input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="ضع اسمك الثلاثي هنا"
+                  placeholder="ضع اسمك الثلاثي باللغة الانجليزية هنا"
                   className="mt-1 w-full rounded-md border border-hairline bg-ink px-3 py-2 text-sm text-bone focus:border-gold"
                 />
                 <p className="mt-1 text-xs text-slate">
