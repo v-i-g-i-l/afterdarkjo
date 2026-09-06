@@ -40,7 +40,7 @@ export default function RegisterPage() {
           <label className="text-xs text-slate">Full name (as it should appear on your tickets)</label>
           <input
             required
-            placeholder="ضع اسمك الثلاثي هنا "
+            placeholder="ضع اسمك الثلاثي باللغة الانجليزية هنا "
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             className="mt-1 w-full rounded-md border border-hairline bg-ink-card px-3 py-2 text-sm text-bone focus:border-gold"
